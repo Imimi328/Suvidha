@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SUVIDHA - Integrated Kiosk</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* --- SkillSwap Aesthetic Variables --- */
+        :root { 
+            --primary: #FF6B6B; 
+            --primary-bg: #FFF1F2;
+            --success: #58CC02; 
+            --danger: #E11D48; 
+            --info: #4ECDC4;
+            
+            --bg-body: #FAFAFB;
+            --bg-card: #FFFFFF;
+            --text-dark: #3C3C3C;
+            --text-muted: #777777;
+            --border: #E5E5E5;
+            
+            --radius-sm: 12px;
+            --radius-md: 16px;
+            --radius-lg: 24px;
+            --radius-pill: 100px;
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+        body, html { width: 100vw; height: 100vh; overflow: hidden; background-color: var(--bg-body); color: var(--text-dark); font-family: 'Inter', sans-serif; }
+        
+        h1, h2, h3, .title, .screen-title, .tap-text, .native-text, .bill-amount, .btn-primary, .numpad .key, .choice-btn span, .badge-pill { 
+            font-family: 'Nunito', sans-serif; 
+        }
+
+        /* --- Layout --- */
+        .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; flex-direction: column; z-index: 3; transition: all 0.3s ease; }
+        .hidden { opacity: 0; visibility: hidden; pointer-events: none; transform: translateY(20px); }
+        .active { opacity: 1; visibility: visible; pointer-events: all; transform: translateY(0); }
+
+        /* --- UI Shell & Navigation --- */
+        .top-nav { position: absolute; top: 30px; left: 40px; right: 40px; z-index: 10; display: flex; justify-content: space-between; align-items: center; }
+        .nav-btn { background: var(--bg-card); border: 2px solid var(--border); border-radius: 50%; width: 55px; height: 55px; display: flex; justify-content: center; align-items: center; font-size: 1.2rem; cursor: pointer; color: var(--text-dark); transition: all 0.2s; }
+        .nav-btn:active { background: #F3F4F6; transform: scale(0.95); }
+        .user-badge { background: var(--bg-card); padding: 10px 20px; border-radius: var(--radius-pill); border: 2px solid var(--border); display: flex; align-items: center; gap: 10px; font-size: 1rem; font-weight: 600; color: var(--text-dark); }
+
+        /* --- Core SaaS Panel (Replaces Glass Panel) --- */
+        .app-panel { background: var(--bg-card); border: 2px solid var(--border); border-radius: var(--radius-lg); padding: 50px; width: 1100px; max-width: 95%; height: auto; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.03); text-align: center; position: relative; }
+        .header-row { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid var(--border); padding-bottom: 20px; margin-bottom: 30px; text-align: left;}
+        
+        .title, .screen-title { font-size: 2.8rem; font-weight: 900; margin-bottom: 8px; color: var(--text-dark); letter-spacing: -1px;}
+        .subtitle, .screen-subtitle { color: var(--text-muted); font-size: 1.15rem; margin-bottom: 25px; font-weight: 500;}
+
+        /* --- Landing Screen (Hero Style) --- */
+        #landingScreen { background: #FFFFFF; } /* Full white background for landing */
+        .hero-container { text-align: center; max-width: 800px; padding: 40px; }
+        .badge-pill { display: inline-block; background: var(--primary-bg); color: var(--primary); padding: 8px 20px; border-radius: var(--radius-pill); font-weight: 800; font-size: 1.2rem; border: 2px solid #FFE4E6; margin-bottom: 25px; }
+        .hero-title { font-size: 5rem; font-weight: 900; letter-spacing: -2px; line-height: 1.1; margin-bottom: 20px; color: var(--text-dark); }
+        .hero-title .highlight { color: var(--primary); }
+        .hero-sub { font-size: 1.4rem; color: var(--text-muted); margin-bottom: 40px; font-weight: 500; line-height: 1.5; }
+        .multilingual-text { font-size: 1rem; color: #999; font-weight: 500; margin-top: 15px; }
+
+        /* --- Language Screen --- */
+        .lang-grid { display: grid; gap: 15px; margin-bottom: 30px; }
+        .grid-3 { grid-template-columns: repeat(3, 1fr); }
+        .grid-4 { grid-template-columns: repeat(4, 1fr); }
+        
+        .lang-btn { background: var(--bg-card); border: 2px solid var(--border); border-radius: var(--radius-md); padding: 25px 20px; color: var(--text-dark); cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .lang-btn .native-text { font-size: 1.6rem; margin-bottom: 5px; font-weight: 800; }
+        .lang-btn .english-text { font-size: 0.95rem; color: var(--text-muted); font-weight: 600; }
+        .lang-btn:active { transform: scale(0.97); background: var(--primary-bg); border-color: var(--primary); }
+        .section-label { text-align: left; font-size: 1rem; color: var(--text-muted); margin-bottom: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* --- Buttons & Inputs --- */
+        .btn-primary { background: var(--primary); border: none; border-radius: var(--radius-pill); padding: 18px 40px; font-size: 1.3rem; color: white; cursor: pointer; width: 100%; transition: transform 0.1s; display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
+        .btn-primary.danger { background: var(--danger); }
+        .btn-primary:active { transform: scale(0.97); }
+        
+        .btn-outline { background: var(--bg-card); border: 2px solid var(--border); border-radius: var(--radius-md); padding: 20px; text-align: center; color: var(--text-dark); cursor: pointer; font-size: 1.1rem; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 12px; transition: all 0.2s; }
+        .btn-outline:active { background: #F3F4F6; }
+
+        .form-group { text-align: left; margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 1rem; margin-bottom: 8px; color: var(--text-dark); font-weight: 700; }
+        .dropdown, .text-input, .form-control { width: 100%; background: #FFFFFF; border: 2px solid var(--border); color: var(--text-dark); padding: 16px 20px; font-size: 1.1rem; border-radius: var(--radius-md); outline: none; appearance: none; cursor: pointer; transition: all 0.2s; font-weight: 500; font-family: 'Inter'; }
+        .dropdown:focus, .text-input:focus, .form-control:focus { border-color: var(--primary); }
+        .row { display: flex; gap: 20px; }
+        .row .form-group { flex: 1; }
+
+        /* --- Numpad & Auth --- */
+        .input-display { background: var(--bg-body); border: 2px solid var(--border); border-radius: var(--radius-md); padding: 20px; font-size: 2.5rem; letter-spacing: 10px; font-weight: 900; color: var(--text-dark); margin-bottom: 30px; width: 100%; text-align: center; height: 90px; display: flex; align-items: center; justify-content: center; font-family: 'Nunito';}
+        .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; max-width: 400px; margin: 0 auto; }
+        .key { background: #FFFFFF; border: 2px solid var(--border); border-radius: var(--radius-md); padding: 20px; font-size: 1.8rem; cursor: pointer; transition: all 0.1s; display: flex; justify-content: center; align-items: center; color: var(--text-dark); }
+        .key:active { transform: scale(0.92); background: #F3F4F6; }
+        .key.action { background: var(--primary-bg); color: var(--primary); border-color: #FFE4E6; }
+        .key.action:active { background: var(--primary); color: white; }
+        
+        .choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-top: 20px; }
+        .choice-btn { background: #FFFFFF; border: 2px solid var(--border); border-radius: var(--radius-lg); padding: 40px 20px; color: var(--text-dark); cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; }
+        .choice-btn i { font-size: 3.5rem; margin-bottom: 20px; color: var(--primary); }
+        .choice-btn span { font-size: 1.3rem; }
+        .choice-btn:active { transform: scale(0.95); background: var(--primary-bg); border-color: var(--primary); }
+
+        .profile-card { background: #FFFFFF; border-radius: var(--radius-md); padding: 25px; margin-bottom: 30px; border: 2px solid var(--border); text-align: left; }
+        .profile-card p { font-size: 1.1rem; margin: 10px 0; color: var(--text-dark); display: flex; align-items: center;}
+        .profile-card span { color: var(--text-muted); width: 100px; display: inline-block; font-weight: 600; font-size: 1rem; }
+
+        /* --- Dashboard Specifics --- */
+        .dashboard-grid { display: grid; grid-template-columns: 420px 1fr; gap: 40px; height: 100%; overflow: hidden; text-align: left;}
+        .scroll-col { display: flex; flex-direction: column; gap: 15px; overflow-y: auto; padding-right: 15px; }
+        
+        .bill-card { background: #FFFFFF; border: 2px solid var(--border); border-radius: var(--radius-md); padding: 25px; position: relative;}
+        .bill-amount { font-size: 2.8rem; margin: 5px 0 10px 0; color: var(--text-dark); letter-spacing: -1px;}
+        
+        .services-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; align-content: start; }
+        .service-card { background: #FFFFFF; border: 2px solid var(--border); border-radius: var(--radius-md); padding: 35px 20px; display: flex; flex-direction: column; align-items: center; text-align: center; cursor: pointer; transition: all 0.2s; }
+        .service-card i { font-size: 3rem; color: var(--primary); margin-bottom: 20px; }
+        .service-card span { font-size: 1.1rem; font-weight: 800; color: var(--text-dark); font-family: 'Nunito'; }
+        .service-card:active { transform: scale(0.95); border-color: var(--primary); background: var(--primary-bg); }
+
+        .history-item { background: #FFFFFF; border: 2px solid var(--border); border-radius: var(--radius-md); padding: 16px 20px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+        .badge { padding: 6px 14px; border-radius: var(--radius-pill); font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; font-family: 'Nunito'; }
+        .badge.success { background: #EFFFF4; color: var(--success); border: 2px solid #D1F4DE; }
+        .badge.pending { background: #FFF9E6; color: #F59E0B; border: 2px solid #FFEDD5; }
+
+        /* --- Modals --- */
+        .modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(250, 250, 251, 0.9); z-index: 100; display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: all 0.3s; }
+        .modal.active { opacity: 1; visibility: visible; }
+        .modal-content { background: #FFFFFF; border-radius: var(--radius-lg); border: 2px solid var(--border); padding: 40px; width: 500px; position: relative; transform: translateY(30px); transition: all 0.3s; box-shadow: 0 20px 40px rgba(0,0,0,0.05); text-align: center; }
+        .modal.active .modal-content { transform: translateY(0); }
+        .close-btn { position: absolute; top: 20px; right: 20px; font-size: 1.5rem; color: var(--text-muted); cursor: pointer; background: var(--bg-body); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid var(--border); }
+
+        .qr-box { background: white; padding: 20px; border-radius: var(--radius-md); margin: 20px auto; width: 240px; position: relative; border: 2px solid var(--border); }
+        .qr-box img { width: 100%; height: auto; transition: opacity 0.3s; }
+        
+        .receipt-data { background: var(--bg-body); padding: 20px; border-radius: var(--radius-sm); font-family: monospace; text-align: left; margin-bottom: 20px; color: var(--text-dark); font-size: 1rem; border: 2px solid var(--border); }
+
+        /* Loader */
+        .loader { border: 6px solid var(--bg-body); border-top: 6px solid var(--primary); border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite; margin: 0 auto 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Audio Highlights */
+        .audio-highlight { border-color: var(--primary) !important; background: var(--primary-bg) !important; transform: scale(1.02); transition: all 0.2s; }
+        .text-highlight { color: var(--primary) !important; }
+
+        /* Google Translate hiding */
+        body { top: 0 !important; } .goog-te-banner-frame { display: none !important; } .skiptranslate { display: none !important; } #goog-gt-tt { display: none !important; }
+    </style>
+</head>
+<body>
+    
+    <div id="google_translate_element" style="display:none;"></div>
+    <script type="text/javascript">
+        function googleTranslateElementInit() { new google.translate.TranslateElement({ pageLanguage: 'en', autoDisplay: false }, 'google_translate_element'); }
+    </script>
+    <script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+    <div class="top-nav" id="topNavUI" style="display: none;">
+        <div style="display: flex; gap: 15px;">
+            <div class="nav-btn" onclick="goBack()" id="backBtn" style="display: none;"><i class="fa-solid fa-arrow-left"></i></div>
+            <div class="nav-btn" onclick="window.location.reload()" id="powerBtn" style="display: none; border-color: #FFE4E6; color: var(--danger); background: #FFF1F2;"><i class="fa-solid fa-power-off"></i></div>
+            
+            <div class="user-badge" id="userBadge" style="display: none;">
+                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" style="width: 30px; border-radius: 50%;"> 
+                <span id="t_header_user">User: Verified</span>
+            </div>
+        </div>
+        <div class="nav-btn audio-btn" onclick="triggerCurrentScreenAudio()"><i class="fa-solid fa-volume-high"></i></div>
+    </div>
+
+    <div class="screen active" id="landingScreen" onclick="transitionToLanguage(event)">
+        <div class="hero-container">
+            <h1 class="hero-title" id="t_hero">SUVIDHA</h1>
+            <p class="hero-sub" id="t_sub">Access your documents, pay bills, and register complaints in one tap.</p>
+            
+            <button class="btn-primary" style="font-size: 1.5rem; padding: 20px 60px; width: auto; margin: 0 auto;">
+                Tap to Start <i class="fa-solid fa-arrow-right"></i>
+            </button>
+            <div class="multilingual-text" id="dynamicLangText">
+                शुरू करने के लिए टैप करें &nbsp;|&nbsp; सुरू करण्यासाठी टॅप करा
+            </div>
+        </div>
+    </div>
+
+    <div class="screen hidden" id="languageScreen">
+        <div class="app-panel" style="width: 900px;">
+            <div class="header-row" style="border: none; margin-bottom: 10px;">
+                <div>
+                    <h2 class="screen-title">Select Your Language</h2>
+                    <p class="screen-subtitle" id="dynamicSubHeader">अपनी भाषा चुनें | आपली भाषा निवडा</p>
+                </div>
+            </div>
+            
+            <div class="section-label">Recommended</div>
+            <div class="lang-grid grid-3" id="priorityLanguages"></div>
+
+            <div class="section-label">Other Languages</div>
+            <div class="lang-grid grid-4" id="otherLanguages"></div>
+        </div>
+    </div>
+
+    <div class="screen hidden" id="methodScreen">
+        <div class="app-panel" style="width: 750px;">
+            <h2 class="screen-title" id="t_auth_title">Identify Yourself</h2>
+            <p class="screen-subtitle" id="t_auth_sub">How would you like to enter your Aadhaar?</p>
+            <div class="choice-grid">
+                <div class="choice-btn" id="btnScanUI" onclick="nav('scanScreen')">
+                    <i class="fa-solid fa-id-card"></i>
+                    <span id="t_btn_scan">Scan Aadhaar Card</span>
+                </div>
+                <div class="choice-btn" id="btnTypeUI" onclick="nav('typeScreen')">
+                    <i class="fa-solid fa-keyboard"></i>
+                    <span id="t_btn_type">Type Aadhaar Number</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="screen hidden" id="typeScreen">
+        <div class="app-panel" style="width: 500px; padding: 40px;">
+            <h2 class="screen-title" id="t_type_title">Enter Aadhaar</h2>
+            <div class="input-display" id="aadhaarDisplay">____ ____ ____</div>
+            <div class="numpad">
+                <div class="key" onclick="appendAadhaar('1')">1</div><div class="key" onclick="appendAadhaar('2')">2</div><div class="key" onclick="appendAadhaar('3')">3</div>
+                <div class="key" onclick="appendAadhaar('4')">4</div><div class="key" onclick="appendAadhaar('5')">5</div><div class="key" onclick="appendAadhaar('6')">6</div>
+                <div class="key" onclick="appendAadhaar('7')">7</div><div class="key" onclick="appendAadhaar('8')">8</div><div class="key" onclick="appendAadhaar('9')">9</div>
+                <div class="key action" onclick="clearAadhaar()" style="background: var(--bg-body); border-color: var(--border); color: var(--text-dark);"><i class="fa-solid fa-delete-left"></i></div>
+                <div class="key" onclick="appendAadhaar('0')">0</div>
+                <div class="key action" onclick="submitAadhaar()"><i class="fa-solid fa-arrow-right"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="screen hidden" id="scanScreen">
+        <div class="app-panel" style="width: 600px;">
+            <h2 class="screen-title" id="t_scan_title">Place Card on Scanner</h2>
+            <p class="screen-subtitle" id="t_scan_sub">Scanning will begin automatically...</p>
+            <i class="fa-solid fa-expand" style="font-size: 6rem; color: var(--border); margin: 50px 0;"></i><br>
+            <button class="btn-primary" style="width: 60%; margin: 0 auto; background: var(--bg-body); color: var(--text-dark); border: 2px solid var(--border);" onclick="mockScanSuccess()" id="t_btn_sim_scan">Simulate Scan</button>
+        </div>
+    </div>
+
+    <div class="screen hidden" id="otpScreen">
+        <div class="app-panel" style="width: 500px; padding: 40px;">
+            <h2 class="screen-title" id="t_otp_title">Verify OTP</h2>
+            <p class="screen-subtitle" id="t_otp_sub">Enter OTP sent to xxxxxx9855</p>
+            <div class="input-display" id="otpDisplayUI">_ _ _ _ _ _</div>
+            <div class="numpad">
+                <div class="key" onclick="appendOtp('1')">1</div><div class="key" onclick="appendOtp('2')">2</div><div class="key" onclick="appendOtp('3')">3</div>
+                <div class="key" onclick="appendOtp('4')">4</div><div class="key" onclick="appendOtp('5')">5</div><div class="key" onclick="appendOtp('6')">6</div>
+                <div class="key" onclick="appendOtp('7')">7</div><div class="key" onclick="appendOtp('8')">8</div><div class="key" onclick="appendOtp('9')">9</div>
+                <div class="key action" onclick="clearOtp()" style="background: var(--bg-body); border-color: var(--border); color: var(--text-dark);"><i class="fa-solid fa-delete-left"></i></div>
+                <div class="key" onclick="appendOtp('0')">0</div>
+                <div class="key action" onclick="submitOtp()"><i class="fa-solid fa-check"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="screen hidden" id="confirmScreen">
+        <div class="app-panel" style="width: 600px;">
+            <h2 class="screen-title" id="t_conf_title">Is this you?</h2>
+            <p class="screen-subtitle" id="t_conf_sub">Please verify your details retrieved from Aadhaar.</p>
+            <div class="profile-card" id="profileCardUI">
+                <p><span>Name:</span> <b id="displayConfirmedName" style="font-family: 'Nunito'; font-size: 1.3rem;">Rahul Sharma</b></p>
+                <p><span>Aadhaar:</span> <b id="displayConfirmedAadhaar">XXXX XXXX 1234</b></p>
+                <p><span>Phone:</span> <b>+91 ******9855</b></p>
+            </div>
+            <div class="row">
+                <button class="btn-primary" style="background: var(--bg-body); color: var(--text-dark); border: 2px solid var(--border);" onclick="confirmIdentity(false)" id="btnNoUI">No, Not Me</button>
+                <button class="btn-primary" onclick="confirmIdentity(true)" id="btnYesUI">Yes, Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="screen hidden" id="loadingScreen">
+        <div class="app-panel" style="width: 400px; padding: 60px;">
+            <div class="loader"></div>
+            <h2 class="screen-title" style="font-size: 1.8rem;" id="t_loading">Verifying...</h2>
+        </div>
+    </div>
+
+    <div class="screen hidden" id="billSetupScreen">
+        <div class="app-panel" style="width: 800px;">
+            <h2 class="screen-title" id="t_setup_title">Link Your First Bill</h2>
+            <p class="screen-subtitle" id="t_setup_sub" style="margin-bottom: 30px;">Let's customize your civic dashboard.</p>
+            
+            <div class="form-group" id="groupStateUI">
+                <label id="t_lbl_state">Select State</label>
+                <select class="form-control" id="billState" onchange="updateProviders()"></select>
+            </div>
+
+            <div class="row">
+                <div class="form-group" id="groupTypeUI">
+                    <label id="t_lbl_type">Utility Type</label>
+                    <select class="form-control" id="billType" onchange="updateProviders()">
+                        <option value="electricity" id="t_opt_elec">Electricity</option>
+                        <option value="water" id="t_opt_water">Water</option>
+                        <option value="gas" id="t_opt_gas">Piped Gas</option>
+                    </select>
+                </div>
+                <div class="form-group" id="groupProviderUI">
+                    <label id="t_lbl_provider">Service Provider</label>
+                    <select class="form-control" id="billProvider"></select>
+                </div>
+            </div>
+            
+            <div class="form-group" style="position: relative;" id="groupConsumerUI">
+                <label id="t_lbl_consumer">Consumer Number (or Scan Bill)</label>
+                <div style="display: flex; gap: 15px;">
+                    <input type="text" class="form-control" id="consumerNumber" readonly onclick="openNumpadForConsumer()" placeholder="Tap to enter number">
+                    <button class="key action" style="padding: 0 30px; border-radius: var(--radius-md);" onclick="mockBillScan()"><i class="fa-solid fa-camera"></i></button>
+                </div>
+            </div>
+            <button class="btn-primary" onclick="finishSetup()" id="btnFinishUI" style="margin-top: 15px;">Save & Continue</button>
+        </div>
+    </div>
+
+    <div class="screen hidden" id="dashboardScreen">
+        <div class="app-panel" style="height: 85vh; padding: 40px 50px; width: 1200px;">
+            <div class="header-row">
+                <div>
+                    <div class="title" id="t_dash_title">Central Kiosk Dashboard</div>
+                    <div class="subtitle" id="t_dash_sub" style="margin-bottom: 0;">Select a service or pay your pending bills</div>
+                </div>
+                <div style="text-align: right; background: var(--bg-body); padding: 15px 25px; border-radius: var(--radius-md); border: 2px solid var(--border);">
+                    <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Current Location</div>
+                    <div style="font-weight: 800; font-size: 1.1rem; color: var(--text-dark); margin-top: 5px; font-family: 'Nunito';"><i class="fa-solid fa-location-dot" style="color:var(--primary);"></i> <span id="dashLocationUI">Pune, Maharashtra</span></div>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="scroll-col" id="billsContainer"></div>
+                <div class="services-grid">
+                    <div class="service-card" onclick="nav('complaintContextScreen')" id="cardCompUI">
+                        <i class="fa-solid fa-bullhorn"></i><span id="t_srv_comp">Register Complaint</span>
+                    </div>
+                    <div class="service-card" onclick="renderHistory(); nav('historyScreen')" id="cardHistUI">
+                        <i class="fa-solid fa-clock-rotate-left"></i><span id="t_srv_hist">History Vault</span>
+                    </div>
+                    <div class="service-card" onclick="showToast('Connecting to LLM Server...')" id="cardAiUI">
+                        <i class="fa-solid fa-robot"></i><span id="t_srv_ai">AI Helpdesk</span>
+                    </div>
+                    <div class="service-card" id="cardGovUI">
+                        <i class="fa-solid fa-landmark-flag"></i><span id="t_srv_gov">Govt Schemes</span>
+                    </div>
+                    <div class="service-card" onclick="showToast('Connecting to DigiLocker API...')" id="cardDocUI">
+                        <i class="fa-solid fa-file-pdf"></i><span id="t_srv_doc">Print Documents</span>
+                    </div>
+                    <div class="service-card" style="border-color: #BFDBFE; background: #EFF6FF;" onclick="openM('supportModal')">
+                        <i class="fa-solid fa-headset" style="color: var(--info);"></i><span>Kiosk Support</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="screen hidden" id="complaintContextScreen">
+        <div class="app-panel" style="width: 800px; height: auto;">
+            <div class="header-row"><div class="title" id="t_ctx_title" style="flex-grow: 1;">Select Affected Service</div></div>
+            <p style="color: var(--text-muted); margin-bottom: 25px; text-align:left; font-weight: 500;">We use your linked bill to fetch the exact address for the technician.</p>
+            <div class="services-grid" style="grid-template-columns: 1fr 1fr;" id="complaintContextGrid"></div>
+            <div class="btn-outline" style="margin-top: 25px; flex-direction: row; justify-content: center; border-color: #FFE4E6; background: var(--primary-bg);" onclick="startBranch('public', 'Public Area', 'GPS Location')">
+                <i class="fa-solid fa-road" style="font-size: 1.5rem; color: var(--primary);"></i> <span style="color: var(--primary); font-family: 'Nunito'; font-weight: 800;">Report Public Area Issue</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="screen hidden" id="complaintTreeScreen">
+        <div class="app-panel" style="width: 800px; height: auto;">
+            <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px;">
+                <div style="color: var(--primary); font-weight: 800; background: var(--primary-bg); padding: 8px 20px; border-radius: var(--radius-pill); font-family: 'Nunito';" id="treeBreadcrumb">Complaint > Water</div>
+            </div>
+            <div class="title" id="treeQuestion" style="margin-bottom: 30px; text-align:left;">What is the exact issue?</div>
+            <div class="services-grid" style="grid-template-columns: 1fr 1fr;" id="treeOptionsGrid"></div>
+        </div>
+    </div>
+
+    <div class="screen hidden" id="historyScreen">
+        <div class="app-panel">
+            <div class="header-row"><div class="title" id="t_hist_title" style="flex-grow: 1;">History Vault</div></div>
+            <div class="dashboard-grid">
+                <div class="scroll-col">
+                    <h3 style="color: var(--text-dark); margin-bottom: 15px; font-family: 'Nunito';"><i class="fa-solid fa-receipt" style="color: var(--primary);"></i> Receipts</h3>
+                    <div id="historyPaymentsContainer"></div>
+                </div>
+                <div class="scroll-col">
+                    <h3 style="color: var(--text-dark); margin-bottom: 15px; font-family: 'Nunito';"><i class="fa-solid fa-ticket" style="color: var(--primary);"></i> Active Tickets</h3>
+                    <div id="historyComplaintsContainer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="payModal">
+        <div class="modal-content" style="width: 450px;">
+            <i class="fa-solid fa-xmark close-btn" onclick="closeM('payModal')"></i>
+            <img src="https://upload.wikimedia.org/wikipedia/commons/e/e1/UPI-Logo-vector.svg" style="height: 30px; margin-bottom: 15px;">
+            <p style="color: var(--text-muted); font-weight: 600; margin-bottom: 5px;" id="payMeta">MSEDCL • Cons: 123456</p>
+            <div class="title" id="payAmount" style="font-size: 3.5rem; margin-bottom: 20px;">₹0</div>
+            
+            <div class="qr-box">
+                <img id="qrImage" src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi://pay?pa=suvidha@ybl&pn=Suvidha&am=100&cu=INR" alt="QR">
+                <div class="qr-overlay" id="qrOverlay">
+                    <i class="fa-solid fa-spinner fa-spin" style="font-size: 3rem; color: var(--primary); margin-bottom: 15px;"></i>
+                    <div style="font-weight: 800; color: var(--text-dark); font-size: 1.2rem; font-family: 'Nunito';" id="qrOverlayText">Processing...</div>
+                </div>
+            </div>
+            
+            <p style="color: var(--text-muted); font-weight: 600; margin-bottom: 25px;"><i class="fa-solid fa-mobile-screen"></i> Scan with any UPI app</p>
+            
+            <div style="display: flex; gap: 10px; justify-content: center;" id="simButtons">
+                <button class="btn-primary" style="background: var(--success); padding: 12px 20px; font-size: 1rem;" onclick="simulatePayment(true)">Simulate Success</button>
+                <button class="btn-primary danger" style="padding: 12px 20px; font-size: 1rem;" onclick="simulatePayment(false)">Simulate Fail</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="receiptModal">
+        <div class="modal-content">
+            <i class="fa-solid fa-circle-check" style="font-size: 5rem; color: var(--success); margin-bottom: 20px;"></i>
+            <h2 id="receiptTitle" class="title" style="font-size: 2rem; margin-bottom: 20px;">Action Successful</h2>
+            <div class="receipt-data" id="receiptData"></div>
+            <div style="display: flex; gap: 15px;">
+                <button class="btn-primary" style="background: var(--bg-body); color: var(--text-dark); border: 2px solid var(--border);" onclick="closeM('receiptModal'); nav('dashboardScreen');">Close</button>
+                <button class="btn-primary" onclick="startPrintingSequence()"><i class="fa-solid fa-print"></i> Print Receipt</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal" id="addBillModal">
+        <div class="modal-content" style="width: 550px;">
+            <i class="fa-solid fa-xmark close-btn" onclick="closeM('addBillModal')"></i>
+            <h2 class="title" style="font-size: 2rem; margin-bottom: 25px;">Link New Bill</h2>
+            <div id="addBillStep1">
+                <div class="form-group"><label>Utility Type</label><select class="form-control" id="newBillType"><option value="electricity">Electricity</option><option value="water">Water Supply</option></select></div>
+                <div class="form-group"><label>Provider</label><select class="form-control" id="newBillProvider"><option>MSEDCL (Mahavitaran)</option><option>Pune Municipal Corp</option></select></div>
+                <div class="form-group" style="position: relative;"><label>Consumer Number</label><input type="text" class="form-control" id="newBillConsumer" placeholder="Enter number..."><button class="btn-outline" style="position: absolute; right: 8px; top: 34px; padding: 10px 15px; border-radius: 10px; flex-direction: row;" onclick="mockOCR()"><i class="fa-solid fa-camera"></i></button></div>
+                <button class="btn-primary" style="margin-top: 10px;" onclick="fetchBillDetails()">Fetch Bill Details</button>
+            </div>
+            <div id="addBillStep2" style="display: none; text-align: left;">
+                <div class="receipt-data" style="margin-bottom: 20px; border-color: #D1F4DE; background: #EFFFF4;">
+                    <span style="color: var(--success); font-weight: 800; font-family: 'Nunito';"><i class="fa-solid fa-check"></i> Bill Found via BBPS</span><br><br>
+                    Provider: <span id="fetchedProvider" style="font-weight: 700;">--</span><br>Consumer: <span id="fetchedConsumer" style="font-weight: 700;">--</span><br>
+                    Registered Name: <strong style="color: var(--text-dark);">Rajesh Kumar (Landlord)</strong><br>
+                    Due: <span style="color: var(--danger); font-weight: 800;">₹850</span>
+                </div>
+                <p style="font-size: 1.1rem; margin-bottom: 15px; font-weight: 700; color: var(--text-dark);">How would you like to link this?</p>
+                <button class="btn-outline" style="padding: 15px; border-color: #BFDBFE; color: var(--info); background: #EFF6FF; flex-direction: row; justify-content: center; width: 100%;" onclick="confirmAddBill('Tenant')"><i class="fa-solid fa-house-user"></i> <span style="font-family: 'Nunito'; font-weight: 800;">Add as Tenant</span></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="supportModal">
+        <div class="modal-content">
+            <i class="fa-solid fa-xmark close-btn" onclick="closeM('supportModal')"></i>
+            <h2 class="title" style="font-size: 2rem; margin-bottom: 25px;"><i class="fa-solid fa-headset" style="color: var(--info);"></i> Kiosk Help</h2>
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <button class="btn-outline" style="padding: 20px; text-align: left; align-items: flex-start; flex-direction: row;" onclick="handleSupport('money')">
+                    <i class="fa-solid fa-money-bill-wave" style="color: var(--success); font-size: 1.5rem; width: 30px;"></i>
+                    <span style="color: var(--text-dark); font-weight: 800; font-family: 'Nunito'; font-size: 1.2rem;">Money Debited, Bill Not Updated</span>
+                </button>
+                <button class="btn-outline" style="padding: 20px; text-align: left; align-items: flex-start; flex-direction: row;" onclick="handleSupport('printer')">
+                    <i class="fa-solid fa-print" style="color: var(--text-muted); font-size: 1.5rem; width: 30px;"></i>
+                    <span style="color: var(--text-dark); font-weight: 800; font-family: 'Nunito'; font-size: 1.2rem;">Receipt Printer Out of Paper</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- API Configuration ---
+        const API_BASE = 'https://suvidaapi.emogi.space/api';
+
+        function getAuthHeaders() {
+            const token = localStorage.getItem('suvidha_token');
+            return {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            };
+        }
+
+        let currentLang = 'en'; let ext = 'mp3';
+        const allLanguages = [ { code: 'en', native: 'English', english: 'English', tapText: 'Tap to start' }, { code: 'hi', native: 'हिंदी', english: 'Hindi', tapText: 'शुरू करने के लिए टैप करें' }, { code: 'mr', native: 'मराठी', english: 'Marathi', tapText: 'सुरू करण्यासाठी टॅप करा' }, { code: 'gu', native: 'ગુજરાતી', english: 'Gujarati', tapText: 'શરૂ કરવા માટે ટેપ કરો' }, { code: 'kn', native: 'ಕನ್ನಡ', english: 'Kannada', tapText: 'ಪ್ರಾರಂಭಿಸಲು ಟ್ಯಾಪ್ ಮಾಡಿ' }, { code: 'ta', native: 'தமிழ்', english: 'Tamil', tapText: 'தொடங்க தட்டவும்' }, { code: 'te', native: 'తెలుగు', english: 'Telugu', tapText: 'ప్రారంభించడానికి నొక్కండి' }, { code: 'bn', native: 'বাংলা', english: 'Bengali', tapText: 'শুরু করতে আলতো চাপুন' }, { code: 'pa', native: 'ਪੰਜਾਬੀ', english: 'Punjabi', tapText: 'ਸ਼ੁਰੂ ਕਰਨ ਲਈ ਟੈਪ ਕਰੋ' }, { code: 'ml', native: 'മലയാളം', english: 'Malayalam', tapText: 'തുടങ്ങാൻ ടാപ്പ് ചെയ്യുക' }, { code: 'or', native: 'ଓଡ଼ିଆ', english: 'Odia', tapText: 'ଆରମ୍ଭ କରିବାକୁ ଟ୍ୟାପ୍ କରନ୍ତୁ' }, { code: 'as', native: 'অসমীয়া', english: 'Assamese', tapText: 'আৰম্ভ কৰিবলৈ টিপক' } ];
+        const stateToLangCode = { "Andhra Pradesh": "te", "Arunachal Pradesh": "en", "Assam": "as", "Bihar": "hi", "Chhattisgarh": "hi", "Goa": "en", "Gujarat": "gu", "Haryana": "hi", "Himachal Pradesh": "hi", "Jharkhand": "hi", "Karnataka": "kn", "Kerala": "ml", "Madhya Pradesh": "hi", "Maharashtra": "mr", "Manipur": "en", "Meghalaya": "en", "Mizoram": "en", "Nagaland": "en", "Odisha": "or", "Punjab": "pa", "Rajasthan": "hi", "Sikkim": "en", "Tamil Nadu": "ta", "Telangana": "te", "Tripura": "bn", "Uttar Pradesh": "hi", "Uttarakhand": "hi", "West Bengal": "bn", "Delhi": "hi" };
+
+        let db = JSON.parse(localStorage.getItem('suvidha_db')) || { bills: [], payments: [], complaints: [] };
+        const icons = { water: "fa-faucet-drip", electricity: "fa-bolt", gas: "fa-fire-flame-simple", public: "fa-road" };
+        function saveState() { localStorage.setItem('suvidha_db', JSON.stringify(db)); }
+
+        let isAudioPlaying = false; let currentAudio = null; let repeatTimer = null; 
+        let detectedLocalCode = 'mr'; let priorityCodes = ['en', 'hi', 'mr']; let geoFetchedState = "Maharashtra";
+
+        function stopAudio() { if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; } isAudioPlaying = false; clearTimeout(repeatTimer); document.querySelectorAll('.audio-highlight, .text-highlight').forEach(el => el.classList.remove('audio-highlight', 'text-highlight')); }
+        function playAudio(path) { return new Promise((resolve) => { if (!isAudioPlaying) { resolve(); return; } if (currentAudio) currentAudio.pause(); let fullPath = path.includes('.') ? path : `kiosk_audio/${currentLang}_${path}.${ext}`; currentAudio = new Audio(fullPath); currentAudio.onended = resolve; currentAudio.onerror = () => { console.warn('Missing audio:', fullPath); resolve(); }; currentAudio.play().catch(resolve); }); }
+        async function playTTSSequence(codes, type) { stopAudio(); isAudioPlaying = true; for (let code of codes) { if (!isAudioPlaying) break; await new Promise((resolve) => { const extension = (code === 'as' || code === 'or') ? 'wav' : 'mp3'; const path = `kiosk_audio/${code}_${type}.${extension}`; currentAudio = new Audio(path); currentAudio.onended = resolve; currentAudio.onerror = () => { console.warn(`Missing: ${path}`); resolve(); }; currentAudio.play().catch(resolve); }); } if (isAudioPlaying) { isAudioPlaying = false; repeatTimer = setTimeout(triggerCurrentScreenAudio, 5000); } }
+
+        let historyStack = ['landingScreen']; let currentActiveScreen = 'landingScreen';
+        function nav(screenId) { stopAudio(); document.querySelectorAll('.screen').forEach(s => s.classList.replace('active', 'hidden')); document.getElementById(screenId).classList.replace('hidden', 'active'); const topNav = document.getElementById('topNavUI'); const backBtn = document.getElementById('backBtn'); const powerBtn = document.getElementById('powerBtn'); const userBadge = document.getElementById('userBadge'); if (screenId === 'landingScreen' || screenId === 'languageScreen') { topNav.style.display = 'none'; if(screenId === 'landingScreen') historyStack = ['landingScreen']; else historyStack.push(screenId); } else { topNav.style.display = 'flex'; if (screenId === 'dashboardScreen') { historyStack = ['dashboardScreen']; backBtn.style.display = 'none'; powerBtn.style.display = 'flex'; userBadge.style.display = 'flex'; renderDashboardBills(); } else if (screenId === 'methodScreen' || screenId === 'loadingScreen') { if(screenId === 'methodScreen') historyStack = ['methodScreen']; backBtn.style.display = 'none'; powerBtn.style.display = 'none'; userBadge.style.display = 'none'; } else { backBtn.style.display = 'flex'; if(historyStack[historyStack.length-1] !== screenId) historyStack.push(screenId); } } currentActiveScreen = screenId; if(screenId === 'complaintContextScreen') initComplaintFlow(); triggerCurrentScreenAudio(); }
+        function goBack() { if (historyStack.length > 1) { historyStack.pop(); nav(historyStack[historyStack.length - 1]); historyStack.pop(); } }
+
+        function transitionToLanguage(event) { stopAudio(); setTimeout(() => { nav('languageScreen'); }, 100); }
+        function selectLanguage(code, name) { stopAudio(); currentLang = code; ext = (code === 'as' || code === 'or') ? 'wav' : 'mp3'; localStorage.setItem('suvidha_lang_code', code); setTimeout(() => { const googleSelect = document.querySelector('.goog-te-combo'); if (googleSelect) { googleSelect.value = code; googleSelect.dispatchEvent(new Event('change')); } }, 100); nav('methodScreen'); }
+        function generateLanguageButton(lang, isPriority = false) { return `<div class="lang-btn ${isPriority ? 'priority' : ''}" onclick="selectLanguage('${lang.code}', '${lang.english}')"><div class="native-text">${lang.native}</div><div class="english-text">${lang.english}</div></div>`; }
+        function renderLanguageGrids() { document.getElementById('priorityLanguages').innerHTML = priorityCodes.map(code => { const langObj = allLanguages.find(l => l.code === code); return generateLanguageButton(langObj, true); }).join(''); document.getElementById('otherLanguages').innerHTML = allLanguages.filter(l => !priorityCodes.includes(l.code)).map(l => generateLanguageButton(l)).join(''); }
+
+        let aadhaarValue = ""; function updateAadhaarDisplay() { document.getElementById('aadhaarDisplay').innerText = aadhaarValue.padEnd(12, '_').match(/.{1,4}/g).join(' '); } function appendAadhaar(num) { if (aadhaarValue.length < 12) { aadhaarValue += num; updateAadhaarDisplay(); } } function clearAadhaar() { aadhaarValue = aadhaarValue.slice(0, -1); updateAadhaarDisplay(); } function submitAadhaar() { aadhaarValue.length === 12 ? processAadhaar(aadhaarValue) : alert("Enter 12 digits."); } function mockScanSuccess() { processAadhaar("987654321012"); } function processAadhaar(number) { nav('loadingScreen'); document.getElementById('displayConfirmedAadhaar').innerText = "XXXX XXXX " + number.slice(-4); localStorage.setItem('suvidha_user_aadhaar', number); setTimeout(() => { nav('otpScreen'); }, 1200); }
+        let otpValue = ""; function updateOtpDisplay() { document.getElementById('otpDisplayUI').innerText = otpValue.padEnd(6, '_').split('').join(' '); } function appendOtp(num) { if (otpValue.length < 6) { otpValue += num; updateOtpDisplay(); } } function clearOtp() { otpValue = otpValue.slice(0, -1); updateOtpDisplay(); } 
+
+        // --- UPDATED OTP FUNCTION ---
+        async function submitOtp() {
+            if (otpValue.length === 6) {
+                nav('loadingScreen');
+                try {
+                    const res = await fetch(`${API_BASE}/auth/verify-otp`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ phone: 'xxxxxx9855', otp: otpValue })
+                    });
+                    const data = await res.json();
+                    
+                    if (data.accessToken) {
+                        localStorage.setItem('suvidha_token', data.accessToken);
+                        setTimeout(() => { nav('confirmScreen'); }, 1000);
+                    } else {
+                        alert("Invalid OTP. Try 123456 for the demo.");
+                        nav('otpScreen');
+                    }
+                } catch (error) {
+                    console.error("Auth Error:", error);
+                    alert("Could not connect to the API Gateway. Ensure backend is running.");
+                    nav('otpScreen');
+                }
+            } else {
+                alert("Enter 6-digit OTP.");
+            }
+        }
+
+        function confirmIdentity(isConfirmed) { if(isConfirmed) { updateProviders(); nav('billSetupScreen'); } else { aadhaarValue = ""; otpValue = ""; updateAadhaarDisplay(); updateOtpDisplay(); localStorage.removeItem('suvidha_user_aadhaar'); nav('methodScreen'); } }
+
+        const providersByState = { "Maharashtra": { electricity: ["MSEDCL (Mahavitaran)", "Tata Power"], water: ["Pune Municipal Corporation", "BMC Water"], gas: ["MNGL"] }, "Delhi": { electricity: ["BSES Rajdhani", "Tata Power DDL"], water: ["Delhi Jal Board"], gas: ["IGL"] }, "Other": { electricity: ["State Electricity Board"], water: ["Municipal Water Board"], gas: ["City Gas"] } }; const allStates = ["Maharashtra", "Delhi", "Other"];
+        function populateStateDropdown(priorityState) { const stateSelect = document.getElementById('billState'); let sortedStates = allStates.filter(s => s !== priorityState); if(allStates.includes(priorityState)) sortedStates.unshift(priorityState); stateSelect.innerHTML = sortedStates.map(s => `<option value="${s}">${s}</option>`).join(''); updateProviders(); }
+        function updateProviders() { const state = document.getElementById('billState').value || "Other"; const type = document.getElementById('billType').value || "electricity"; const providerSelect = document.getElementById('billProvider'); const stateData = providersByState[state] || providersByState["Other"]; providerSelect.innerHTML = (stateData[type] || []).map(p => `<option value="${p}">${p}</option>`).join(''); }
+        function openNumpadForConsumer() { const val = prompt("Enter Consumer Number:"); if(val) document.getElementById('consumerNumber').value = val; } function mockBillScan() { nav('loadingScreen'); setTimeout(() => { document.getElementById('consumerNumber').value = "1703" + Math.floor(Math.random() * 100000); nav('billSetupScreen'); }, 1000); }
+        function finishSetup() { const consumerNo = document.getElementById('consumerNumber').value; const type = document.getElementById('billType').value; const provider = document.getElementById('billProvider').value; if(!consumerNo) return alert("Please enter consumer number."); db.bills = [{ id: "b1", type: type, provider: provider, consumer: consumerNo, amount: 1240, address: "Fetched from DB", role: 'Owner' }]; saveState(); nav('dashboardScreen'); }
+
+        function renderDashboardBills() { const container = document.getElementById('billsContainer'); let html = `<h3 class="title" style="font-size: 1.8rem; margin-bottom: 15px;">Your Bills</h3>`; if(db.bills.length === 0) html += `<div style="text-align:center; color:var(--text-muted); margin-top:50px;">No pending bills!</div>`; else { html += db.bills.map(b => { const roleTag = b.role === 'Tenant' ? `<span style="background: #E0F2FE; color: #0284C7; border: 2px solid #BAE6FD; padding: 4px 10px; border-radius: var(--radius-pill); font-size: 0.75rem; margin-left: 10px; font-weight: 800; font-family: 'Nunito';">TENANT</span>` : ``; return `<div class="bill-card"><div style="display: flex; justify-content: space-between; align-items: center;"><i class="fa-solid ${icons[b.type] || "fa-bolt"}" style="font-size: 2rem; color:var(--text-muted);"></i><span style="background: var(--bg-body); border: 2px solid var(--border); color: var(--text-dark); padding: 4px 14px; border-radius: var(--radius-pill); font-size: 0.8rem; font-weight: 800; text-transform: uppercase; font-family: 'Nunito';">${b.type}</span></div><div class="bill-amount">₹${b.amount}</div><div style="color: var(--text-muted); font-size: 1rem; margin-bottom: 20px; font-weight: 500;"><strong style="color: var(--text-dark);">${b.provider}</strong> ${roleTag}<br>No: ${b.consumer}</div><button class="btn-primary" onclick="initPayment('${b.id}')">Pay Now</button></div>`; }).join(''); } html += `<div class="btn-outline" style="margin-top: 20px;" onclick="openM('addBillModal')"><i class="fa-solid fa-plus" style="font-size: 2rem; color: var(--text-muted);"></i> <span style="font-family: 'Nunito'; font-weight: 800;">Link New Bill</span></div>`; container.innerHTML = html; }
+        function renderHistory() { document.getElementById('historyPaymentsContainer').innerHTML = db.payments.length === 0 ? "<p>No payments yet.</p>" : db.payments.slice().reverse().map(p => `<div class="history-item"><div><div style="font-weight: 800; color: var(--text-dark); font-family: 'Nunito';">${p.provider}</div><div style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">${p.date} • TXN: ${p.txnId}</div></div><div style="text-align: right;"><div style="font-weight: 900; font-size: 1.3rem; color: var(--text-dark); font-family: 'Nunito';">₹${p.amount}</div><span class="badge success" style="margin-top: 4px; display: inline-block;">Paid</span></div></div>`).join(''); document.getElementById('historyComplaintsContainer').innerHTML = db.complaints.length === 0 ? "<p>No active tickets.</p>" : db.complaints.slice().reverse().map(c => `<div class="history-item"><div><div style="font-weight: 800; color: var(--text-dark); font-family: 'Nunito';">${c.category.toUpperCase()} Issue</div><div style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">${c.date} • ID: ${c.ticketId}</div><div style="font-size: 0.95rem; margin-top: 8px; color: var(--text-dark); font-weight: 500;">${c.issueDesc}</div></div><div><span class="badge pending">Open</span></div></div>`).join(''); }
+
+        let activePayId = null; async function initPayment(billId) { stopAudio(); const bill = db.bills.find(b => b.id === billId); activePayId = billId; document.getElementById('payAmount').innerText = `₹${bill.amount}`; document.getElementById('payMeta').innerText = `${bill.provider} • Cons: ${bill.consumer}`; document.getElementById('qrOverlay').classList.remove('active'); document.getElementById('simButtons').style.display = 'flex'; openM('payModal'); isAudioPlaying = true; await playAudio('pay_scan'); }
+        async function simulatePayment(isSuccess) { stopAudio(); const overlay = document.getElementById('qrOverlay'); document.getElementById('simButtons').style.display = 'none'; overlay.classList.add('active'); document.getElementById('qrOverlayText').innerText = "Processing..."; document.getElementById('qrOverlayText').style.color = "var(--text-dark)"; overlay.querySelector('i').className = "fa-solid fa-spinner fa-spin"; overlay.querySelector('i').style.color = "var(--primary)"; isAudioPlaying = true; playAudio('pay_processing'); setTimeout(async () => { if(isSuccess) { overlay.querySelector('i').className = "fa-solid fa-circle-check"; overlay.querySelector('i').style.color = "var(--success)"; document.getElementById('qrOverlayText').innerText = "Success!"; setTimeout(executePayment, 800); } else { overlay.querySelector('i').className = "fa-solid fa-circle-xmark"; overlay.querySelector('i').style.color = "var(--danger)"; document.getElementById('qrOverlayText').innerText = "Bank Timeout"; document.getElementById('qrOverlayText').style.color = "var(--danger)"; await playAudio('pay_fail'); setTimeout(() => { overlay.classList.remove('active'); document.getElementById('simButtons').style.display = 'flex'; }, 1000); } }, 2500); }
+        
+        // --- UPDATED PAYMENT FUNCTION ---
+        async function executePayment() {
+            stopAudio();
+            const bIdx = db.bills.findIndex(b => b.id === activePayId);
+            const bill = db.bills[bIdx];
+            
+            try {
+                const res = await fetch(`${API_BASE}/payments/create-order`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ amount: bill.amount, receiptId: bill.id })
+                });
+                const orderData = await res.json();
+                
+                const txn = "TXN" + Math.floor(Math.random() * 999999);
+                const dateStr = new Date().toLocaleString();
+                
+                db.payments.push({ id: bill.id, type: bill.type, provider: bill.provider, amount: bill.amount, txnId: txn, date: dateStr });
+                db.bills.splice(bIdx, 1);
+                saveState();
+                
+                closeM('payModal');
+                document.getElementById('receiptData').innerHTML = `TXN ID: <strong style="color:var(--text-dark);">${txn}</strong><br>DATE: ${dateStr}<br>PROVIDER: ${bill.provider}<br>AMOUNT PAID: <strong style="color:var(--text-dark);">₹${bill.amount}</strong>`;
+                openM('receiptModal');
+                renderDashboardBills();
+                
+                isAudioPlaying = true;
+                await playAudio('pay_success');
+            } catch (error) {
+                console.error("Payment Error:", error);
+                alert("Payment gateway connection failed.");
+            }
+        }
+
+        async function startPrintingSequence() { stopAudio(); closeM('receiptModal'); nav('dashboardScreen'); } // Simplified for this demo
+
+        const decisionTree = { "root_water": { q: "What is the issue with your Water supply?", opts: [ {l:"No Water", n:"submit_urgent"}, {l:"Contaminated/Dirty", n:"w_dirty"}, {l:"Low Pressure", n:"submit_normal"} ], audio: "tree_water_q" }, "w_dirty": { q: "What kind of contamination?", opts: [ {l:"Muddy/Brown", n:"submit_normal"}, {l:"Foul Smell", n:"submit_normal"}, {l:"Sewer Water Mixing", n:"submit_urgent"} ] }, "root_electricity": { q: "What is the electricity issue?", opts: [ {l:"Power Cut", n:"e_scope"}, {l:"Voltage Fluctuations", n:"submit_normal"}, {l:"Sparking Pole", n:"submit_urgent"} ], audio: "tree_elec_q" }, "e_scope": { q: "Is the power cut only in your house?", opts: [ {l:"Only my house", n:"submit_normal"}, {l:"Whole area", n:"submit_urgent"} ] }, "root_public": { q: "What is the public issue?", opts: [ {l:"Potholes", n:"submit_normal"}, {l:"Garbage Dump", n:"submit_normal"}, {l:"Fallen Tree", n:"submit_urgent"} ]} };
+        let curComp = {}; function initComplaintFlow() { document.getElementById('complaintContextGrid').innerHTML = db.bills.map(b => `<div class="service-card" style="padding: 25px;" onclick="startBranch('${b.type}', '${b.provider}', '${b.address}')"><i class="fa-solid ${icons[b.type]}" style="font-size: 2.5rem;"></i><span style="font-size: 1.1rem; margin-top: 15px;">${b.provider}</span></div>`).join(''); } function startBranch(type, provider, address) { curComp = { type, provider, address, path: [] }; loadNode(`root_${type}`); nav('complaintTreeScreen'); } async function loadNode(nodeId, selectionText = "") { stopAudio(); if(selectionText) curComp.path.push(selectionText); if(nodeId.startsWith('submit')) return generateTicket(nodeId === 'submit_urgent'); const node = decisionTree[nodeId]; if(!node) return nav('dashboardScreen'); document.getElementById('treeBreadcrumb').innerText = `Complaint > ${curComp.type.toUpperCase()}`; document.getElementById('treeQuestion').innerText = node.q; document.getElementById('treeOptionsGrid').innerHTML = node.opts.map(opt => `<div class="btn-outline" onclick="loadNode('${opt.n}', '${opt.l}')"><span style="color: var(--text-dark); font-size: 1.2rem; font-weight: 800; font-family: 'Nunito';">${opt.l}</span></div>`).join(''); isAudioPlaying = true; if(node.audio) await playAudio(node.audio); }
+        
+        // --- UPDATED TICKET GENERATION ---
+        async function generateTicket(isUrgent) {
+            stopAudio();
+            const desc = curComp.path.join(" > ");
+            
+            try {
+                const res = await fetch(`${API_BASE}/complaints`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ 
+                        category: curComp.type, 
+                        department: curComp.provider, 
+                        details: desc 
+                    })
+                });
+                const data = await res.json();
+                const tId = data.complaintId || "SVD-" + Math.floor(Math.random() * 9999);
+                
+                db.complaints.push({ ticketId: tId, category: curComp.type, provider: curComp.provider, issueDesc: desc, address: curComp.address, urgent: isUrgent, date: new Date().toLocaleDateString() });
+                saveState();
+                
+                document.getElementById('receiptTitle').innerText = "Ticket Raised!";
+                document.getElementById('receiptData').innerHTML = `TICKET ID: <strong style="color:var(--text-dark);">${tId}</strong><br>PRIORITY: <strong style="color:${isUrgent ? 'var(--danger)' : 'var(--warning)'}">${isUrgent ? 'HIGH' : 'NORMAL'}</strong><br>ISSUE: ${desc}<br>LOC: ${curComp.address}`;
+                openM('receiptModal');
+                
+                isAudioPlaying = true;
+                await playAudio('tree_ticket_success');
+            } catch (error) {
+                console.error("Complaint Error:", error);
+                alert("Failed to submit complaint to the server.");
+            }
+        }
+
+        function openM(id) { document.getElementById(id).classList.add('active'); } function closeM(id) { document.getElementById(id).classList.remove('active'); }
+        function mockOCR() { document.getElementById('newBillConsumer').value = "SCANNING..."; setTimeout(() => { document.getElementById('newBillConsumer').value = "0000" + Math.floor(Math.random()*99999); }, 1000); } 
+        
+        // --- UPDATED BILL FETCHING ---
+        async function fetchBillDetails() {
+            const num = document.getElementById('newBillConsumer').value;
+            const provider = document.getElementById('newBillProvider').value;
+            if (!num || num === "SCANNING...") return alert("Enter consumer number");
+            
+            try {
+                const res = await fetch(`${API_BASE}/bills/${num}`, { 
+                    headers: getAuthHeaders() 
+                });
+                const data = await res.json();
+                
+                document.getElementById('addBillStep1').style.display = 'none';
+                document.getElementById('fetchedProvider').innerText = data.provider || provider;
+                document.getElementById('fetchedConsumer').innerText = data.consumer || num;
+                document.getElementById('addBillStep2').style.display = 'block';
+            } catch (error) {
+                console.error("Fetch Bill Error:", error);
+                alert("Failed to fetch bill details from the server.");
+            }
+        }
+
+        async function confirmAddBill(role) { stopAudio(); db.bills.push({ id: "b" + Date.now(), type: document.getElementById('newBillType').value, provider: document.getElementById('fetchedProvider').innerText, consumer: document.getElementById('fetchedConsumer').innerText, amount: 850, address: "Fetched from DB (Pune)", role: role }); saveState(); renderDashboardBills(); closeM('addBillModal'); setTimeout(() => { document.getElementById('addBillStep1').style.display = 'block'; document.getElementById('addBillStep2').style.display = 'none'; document.getElementById('newBillConsumer').value = ''; }, 500); isAudioPlaying = true; if(role === 'Tenant') await playAudio('add_bill_tenant'); }
+        async function handleSupport(type) { stopAudio(); closeM('supportModal'); }
+
+        function triggerCurrentScreenAudio() { if (isAudioPlaying) return; if (currentActiveScreen === 'landingScreen') playLandingAudio(new Event('click')); else if (currentActiveScreen === 'languageScreen') playLanguageSelectionAudio(new Event('click')); else if (currentActiveScreen === 'methodScreen') { isAudioPlaying = true; _playMethodAudio(); } else if (currentActiveScreen === 'otpScreen') { isAudioPlaying = true; _playOtpAudio(); } else if (currentActiveScreen === 'confirmScreen') { isAudioPlaying = true; _playConfirmAudio(); } else if (currentActiveScreen === 'billSetupScreen') { isAudioPlaying = true; _playSetupAudio(); } else if (currentActiveScreen === 'dashboardScreen') { isAudioPlaying = true; _playDashboardAudio(); } else if (currentActiveScreen === 'complaintContextScreen') { isAudioPlaying = true; playAudio('comp_cat'); } }
+        function playLandingAudio(event) { if(event) event.stopPropagation(); playTTSSequence(priorityCodes, 'tap'); } function playLanguageSelectionAudio(event) { if(event) event.stopPropagation(); playTTSSequence(priorityCodes, 'select'); }
+        async function _playMethodAudio() { const subText = document.getElementById('t_auth_sub'); const scanBtn = document.getElementById('btnScanUI'); const typeBtn = document.getElementById('btnTypeUI'); subText.classList.add('text-highlight'); await playAudio('auth_sub'); subText.classList.remove('text-highlight'); if(!isAudioPlaying) return; scanBtn.classList.add('audio-highlight'); await playAudio('btn_scan'); scanBtn.classList.remove('audio-highlight'); if(!isAudioPlaying) return; typeBtn.classList.add('audio-highlight'); await playAudio('btn_type'); typeBtn.classList.remove('audio-highlight'); if (isAudioPlaying) { isAudioPlaying = false; repeatTimer = setTimeout(triggerCurrentScreenAudio, 5000); } }
+        async function _playOtpAudio() { const otpSub = document.getElementById('t_otp_sub'); const otpDisplay = document.getElementById('otpDisplayUI'); otpSub.classList.add('text-highlight'); await playAudio('otp_sub'); otpSub.classList.remove('text-highlight'); if(!isAudioPlaying) return; otpDisplay.classList.add('audio-highlight'); setTimeout(() => { otpDisplay.classList.remove('audio-highlight'); if (isAudioPlaying) { isAudioPlaying = false; repeatTimer = setTimeout(triggerCurrentScreenAudio, 5000); } }, 1500); }
+        async function _playConfirmAudio() { const confSub = document.getElementById('t_conf_sub'); const profileCard = document.getElementById('profileCardUI'); const btnNo = document.getElementById('btnNoUI'); const btnYes = document.getElementById('btnYesUI'); confSub.classList.add('text-highlight'); await playAudio('conf_sub'); confSub.classList.remove('text-highlight'); if(!isAudioPlaying) return; profileCard.classList.add('audio-highlight'); await playAudio('conf_title'); profileCard.classList.remove('audio-highlight'); if(!isAudioPlaying) return; btnYes.classList.add('audio-highlight'); await playAudio('btn_yes'); btnYes.classList.remove('audio-highlight'); if(!isAudioPlaying) return; btnNo.classList.add('audio-highlight'); await playAudio('btn_no'); btnNo.classList.remove('audio-highlight'); if (isAudioPlaying) { isAudioPlaying = false; repeatTimer = setTimeout(triggerCurrentScreenAudio, 5000); } }
+        async function _playSetupAudio() { const setupSub = document.getElementById('t_setup_sub'); const gState = document.getElementById('groupStateUI'); const gType = document.getElementById('groupTypeUI'); const gProvider = document.getElementById('groupProviderUI'); const gConsumer = document.getElementById('groupConsumerUI'); const btnFinish = document.getElementById('btnFinishUI'); setupSub.classList.add('text-highlight'); await playAudio('setup_sub'); setupSub.classList.remove('text-highlight'); if(!isAudioPlaying) return; gState.classList.add('audio-highlight'); await playAudio('lbl_state'); gState.classList.remove('audio-highlight'); if(!isAudioPlaying) return; gType.classList.add('audio-highlight'); await playAudio('lbl_type'); gType.classList.remove('audio-highlight'); if(!isAudioPlaying) return; gProvider.classList.add('audio-highlight'); await playAudio('lbl_provider'); gProvider.classList.remove('audio-highlight'); if(!isAudioPlaying) return; gConsumer.classList.add('audio-highlight'); await playAudio('lbl_consumer'); gConsumer.classList.remove('audio-highlight'); if(!isAudioPlaying) return; btnFinish.classList.add('audio-highlight'); await playAudio('btn_finish'); btnFinish.classList.remove('audio-highlight'); if (isAudioPlaying) { isAudioPlaying = false; repeatTimer = setTimeout(triggerCurrentScreenAudio, 5000); } }
+        async function _playDashboardAudio() { const b = document.getElementById('billsContainer'); const s = document.getElementById('cardCompUI'); b.classList.add('audio-highlight'); await playAudio('your_bills'); b.classList.remove('audio-highlight'); if(!isAudioPlaying) return; s.classList.add('audio-highlight'); await playAudio('services'); s.classList.remove('audio-highlight'); if (isAudioPlaying) { isAudioPlaying = false; repeatTimer = setTimeout(triggerCurrentScreenAudio, 8000); } }
+
+        async function fetchLocationAndInit() { if ("geolocation" in navigator) { navigator.geolocation.getCurrentPosition(async (position) => { try { const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${position.coords.latitude}&longitude=${position.coords.longitude}&localityLanguage=en`); const data = await res.json(); geoFetchedState = data.principalSubdivision; if (stateToLangCode[geoFetchedState]) detectedLocalCode = stateToLangCode[geoFetchedState]; if (data.city && data.principalSubdivision) { document.getElementById('dashLocationUI').innerText = `${data.city}, ${data.principalSubdivision}`; } } catch (e) { console.warn("Location fetch failed", e); } finally { finalizeInit(); } }, () => finalizeInit()); } else { finalizeInit(); } }
+        function finalizeInit() { if (detectedLocalCode !== 'en' && detectedLocalCode !== 'hi') priorityCodes = ['en', 'hi', detectedLocalCode]; else priorityCodes = ['en', 'hi']; if (priorityCodes.length === 3) { const localLangObj = allLanguages.find(l => l.code === priorityCodes[2]); document.getElementById('dynamicLangText').innerHTML = `शुरू करने के लिए टैप करें &nbsp;|&nbsp; ${localLangObj.tapText}`; document.getElementById('dynamicSubHeader').innerHTML = `अपनी भाषा चुनें | ${localLangObj.native} निवडा`; } renderLanguageGrids(); let providerState = geoFetchedState; if(!allStates.includes(providerState)) providerState = "Other"; populateStateDropdown(providerState); updateAadhaarDisplay(); updateOtpDisplay(); nav('landingScreen'); }
+
+        window.onload = fetchLocationAndInit;
+    </script>
+</body>
+</html>
