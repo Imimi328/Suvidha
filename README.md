@@ -1,59 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SUVIDHA README</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem;
-            background-color: #f9f9f9;
-        }
-        .container {
-            background-color: #fff;
-            padding: 2rem 3rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        h1, h2, h3 {
-            border-bottom: 1px solid #eaecef;
-            padding-bottom: 0.3em;
-            margin-top: 1.5em;
-        }
-        h1 { font-size: 2em; }
-        h2 { font-size: 1.5em; }
-        h3 { font-size: 1.25em; border-bottom: none; }
-        code {
-            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-            background-color: #f6f8fa;
-            padding: 0.2em 0.4em;
-            border-radius: 3px;
-            font-size: 85%;
-        }
-        pre {
-            background-color: #f6f8fa;
-            padding: 16px;
-            overflow: auto;
-            border-radius: 6px;
-            line-height: 1.45;
-        }
-        pre code {
-            background-color: transparent;
-            padding: 0;
-        }
-        ul, ol {
-            padding-left: 2em;
-        }
-        li {
-            margin-bottom: 0.25em;
-        }
-    </style>
-</head>
 <body>
     <div class="container">
         <h1>SUVIDHA - Centralised Smart Civic Services KIOSK And Digital Helpdesk Platform</h1>
