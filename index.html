@@ -348,7 +348,7 @@
                     <div class="service-card" onclick="showToast('Connecting to DigiLocker API...')" id="cardDocUI">
                         <i class="fa-solid fa-file-pdf"></i><span id="t_srv_doc">Print Documents</span>
                     </div>
-                    <div class="service-card" style="border-color: #BFDBFE; background: #EFF6FF;" onclick="openM('supportModal')">
+                    <div class="service-card" style="border-color: #BFDBFE; background: #EFF6FF;" onclick="openM('supportModal')" id="cardSupportUI">
                         <i class="fa-solid fa-headset" style="color: var(--info);"></i><span>Kiosk Support</span>
                     </div>
                 </div>
@@ -585,10 +585,58 @@
             }
         }
 
-        async function startPrintingSequence() { stopAudio(); closeM('receiptModal'); nav('dashboardScreen'); } // Simplified for this demo
+        // --- UPDATED PRINTING FLOW ---
+        async function startPrintingSequence() { 
+            stopAudio(); 
+            isAudioPlaying = true;
+            await playAudio('print_receipt');
+            closeM('receiptModal'); 
+            nav('dashboardScreen'); 
+        }
 
-        const decisionTree = { "root_water": { q: "What is the issue with your Water supply?", opts: [ {l:"No Water", n:"submit_urgent"}, {l:"Contaminated/Dirty", n:"w_dirty"}, {l:"Low Pressure", n:"submit_normal"} ], audio: "tree_water_q" }, "w_dirty": { q: "What kind of contamination?", opts: [ {l:"Muddy/Brown", n:"submit_normal"}, {l:"Foul Smell", n:"submit_normal"}, {l:"Sewer Water Mixing", n:"submit_urgent"} ] }, "root_electricity": { q: "What is the electricity issue?", opts: [ {l:"Power Cut", n:"e_scope"}, {l:"Voltage Fluctuations", n:"submit_normal"}, {l:"Sparking Pole", n:"submit_urgent"} ], audio: "tree_elec_q" }, "e_scope": { q: "Is the power cut only in your house?", opts: [ {l:"Only my house", n:"submit_normal"}, {l:"Whole area", n:"submit_urgent"} ] }, "root_public": { q: "What is the public issue?", opts: [ {l:"Potholes", n:"submit_normal"}, {l:"Garbage Dump", n:"submit_normal"}, {l:"Fallen Tree", n:"submit_urgent"} ]} };
-        let curComp = {}; function initComplaintFlow() { document.getElementById('complaintContextGrid').innerHTML = db.bills.map(b => `<div class="service-card" style="padding: 25px;" onclick="startBranch('${b.type}', '${b.provider}', '${b.address}')"><i class="fa-solid ${icons[b.type]}" style="font-size: 2.5rem;"></i><span style="font-size: 1.1rem; margin-top: 15px;">${b.provider}</span></div>`).join(''); } function startBranch(type, provider, address) { curComp = { type, provider, address, path: [] }; loadNode(`root_${type}`); nav('complaintTreeScreen'); } async function loadNode(nodeId, selectionText = "") { stopAudio(); if(selectionText) curComp.path.push(selectionText); if(nodeId.startsWith('submit')) return generateTicket(nodeId === 'submit_urgent'); const node = decisionTree[nodeId]; if(!node) return nav('dashboardScreen'); document.getElementById('treeBreadcrumb').innerText = `Complaint > ${curComp.type.toUpperCase()}`; document.getElementById('treeQuestion').innerText = node.q; document.getElementById('treeOptionsGrid').innerHTML = node.opts.map(opt => `<div class="btn-outline" onclick="loadNode('${opt.n}', '${opt.l}')"><span style="color: var(--text-dark); font-size: 1.2rem; font-weight: 800; font-family: 'Nunito';">${opt.l}</span></div>`).join(''); isAudioPlaying = true; if(node.audio) await playAudio(node.audio); }
+        // --- UPDATED DECISION TREE TO INCLUDE AUDIO MAPPINGS ---
+        const decisionTree = { 
+            "root_water": { q: "What is the issue with your Water supply?", opts: [ {l:"No Water", n:"submit_urgent", a:"tree_w_nowater"}, {l:"Contaminated/Dirty", n:"w_dirty", a:"tree_w_dirty"}, {l:"Low Pressure", n:"submit_normal", a:"tree_w_pressure"} ], audio: "tree_water_q" }, 
+            "w_dirty": { q: "What kind of contamination?", opts: [ {l:"Muddy/Brown", n:"submit_normal"}, {l:"Foul Smell", n:"submit_normal"}, {l:"Sewer Water Mixing", n:"submit_urgent"} ] }, 
+            "root_electricity": { q: "What is the electricity issue?", opts: [ {l:"Power Cut", n:"e_scope", a:"tree_e_cut"}, {l:"Voltage Fluctuations", n:"submit_normal", a:"tree_e_volt"}, {l:"Sparking Pole", n:"submit_urgent", a:"tree_e_spark"} ], audio: "tree_elec_q" }, 
+            "e_scope": { q: "Is the power cut only in your house?", opts: [ {l:"Only my house", n:"submit_normal"}, {l:"Whole area", n:"submit_urgent"} ] }, 
+            "root_public": { q: "What is the public issue?", opts: [ {l:"Potholes", n:"submit_normal"}, {l:"Garbage Dump", n:"submit_normal"}, {l:"Fallen Tree", n:"submit_urgent"} ]} 
+        };
+        
+        let curComp = {}; function initComplaintFlow() { document.getElementById('complaintContextGrid').innerHTML = db.bills.map(b => `<div class="service-card" style="padding: 25px;" onclick="startBranch('${b.type}', '${b.provider}', '${b.address}')"><i class="fa-solid ${icons[b.type]}" style="font-size: 2.5rem;"></i><span style="font-size: 1.1rem; margin-top: 15px;">${b.provider}</span></div>`).join(''); } function startBranch(type, provider, address) { curComp = { type, provider, address, path: [] }; loadNode(`root_${type}`); nav('complaintTreeScreen'); } 
+        
+        // --- UPDATED LOAD NODE TO PLAY OPTION AUDIO SEQUENTIALLY ---
+        async function loadNode(nodeId, selectionText = "") { 
+            stopAudio(); 
+            if(selectionText) curComp.path.push(selectionText); 
+            if(nodeId.startsWith('submit')) return generateTicket(nodeId === 'submit_urgent'); 
+            const node = decisionTree[nodeId]; 
+            if(!node) return nav('dashboardScreen'); 
+            
+            document.getElementById('treeBreadcrumb').innerText = `Complaint > ${curComp.type.toUpperCase()}`; 
+            document.getElementById('treeQuestion').innerText = node.q; 
+            document.getElementById('treeOptionsGrid').innerHTML = node.opts.map((opt, i) => `<div class="btn-outline" id="opt_${nodeId}_${i}" onclick="loadNode('${opt.n}', '${opt.l}')"><span style="color: var(--text-dark); font-size: 1.2rem; font-weight: 800; font-family: 'Nunito';">${opt.l}</span></div>`).join(''); 
+            
+            isAudioPlaying = true; 
+            if(node.audio) {
+                document.getElementById('treeQuestion').classList.add('text-highlight');
+                await playAudio(node.audio);
+                document.getElementById('treeQuestion').classList.remove('text-highlight');
+                if(!isAudioPlaying) return;
+            }
+            
+            if (node.opts && node.opts.length > 0 && node.opts[0].a) {
+                for (let i = 0; i < node.opts.length; i++) {
+                    if (!isAudioPlaying) break;
+                    let el = document.getElementById(`opt_${nodeId}_${i}`);
+                    if (el && node.opts[i].a) {
+                        el.classList.add('audio-highlight');
+                        await playAudio(node.opts[i].a);
+                        el.classList.remove('audio-highlight');
+                    }
+                }
+            }
+        }
         
         // --- UPDATED TICKET GENERATION ---
         async function generateTicket(isUrgent) {
@@ -649,7 +697,20 @@
         }
 
         async function confirmAddBill(role) { stopAudio(); db.bills.push({ id: "b" + Date.now(), type: document.getElementById('newBillType').value, provider: document.getElementById('fetchedProvider').innerText, consumer: document.getElementById('fetchedConsumer').innerText, amount: 850, address: "Fetched from DB (Pune)", role: role }); saveState(); renderDashboardBills(); closeM('addBillModal'); setTimeout(() => { document.getElementById('addBillStep1').style.display = 'block'; document.getElementById('addBillStep2').style.display = 'none'; document.getElementById('newBillConsumer').value = ''; }, 500); isAudioPlaying = true; if(role === 'Tenant') await playAudio('add_bill_tenant'); }
-        async function handleSupport(type) { stopAudio(); closeM('supportModal'); }
+        
+        // --- UPDATED HANDLE SUPPORT AUDIO LOGIC ---
+        async function handleSupport(type) { 
+            stopAudio(); 
+            closeM('supportModal'); 
+            isAudioPlaying = true;
+            if (type === 'money') {
+                await playAudio('support_ticket_raised');
+                alert("Ticket Raised for Payment Issue.");
+            } else if (type === 'printer') {
+                await playAudio('support_printer_empty');
+                alert("Support Staff Notified for Printer Refill.");
+            }
+        }
 
         function triggerCurrentScreenAudio() { if (isAudioPlaying) return; if (currentActiveScreen === 'landingScreen') playLandingAudio(new Event('click')); else if (currentActiveScreen === 'languageScreen') playLanguageSelectionAudio(new Event('click')); else if (currentActiveScreen === 'methodScreen') { isAudioPlaying = true; _playMethodAudio(); } else if (currentActiveScreen === 'otpScreen') { isAudioPlaying = true; _playOtpAudio(); } else if (currentActiveScreen === 'confirmScreen') { isAudioPlaying = true; _playConfirmAudio(); } else if (currentActiveScreen === 'billSetupScreen') { isAudioPlaying = true; _playSetupAudio(); } else if (currentActiveScreen === 'dashboardScreen') { isAudioPlaying = true; _playDashboardAudio(); } else if (currentActiveScreen === 'complaintContextScreen') { isAudioPlaying = true; playAudio('comp_cat'); } }
         function playLandingAudio(event) { if(event) event.stopPropagation(); playTTSSequence(priorityCodes, 'tap'); } function playLanguageSelectionAudio(event) { if(event) event.stopPropagation(); playTTSSequence(priorityCodes, 'select'); }
@@ -657,7 +718,42 @@
         async function _playOtpAudio() { const otpSub = document.getElementById('t_otp_sub'); const otpDisplay = document.getElementById('otpDisplayUI'); otpSub.classList.add('text-highlight'); await playAudio('otp_sub'); otpSub.classList.remove('text-highlight'); if(!isAudioPlaying) return; otpDisplay.classList.add('audio-highlight'); setTimeout(() => { otpDisplay.classList.remove('audio-highlight'); if (isAudioPlaying) { isAudioPlaying = false; repeatTimer = setTimeout(triggerCurrentScreenAudio, 5000); } }, 1500); }
         async function _playConfirmAudio() { const confSub = document.getElementById('t_conf_sub'); const profileCard = document.getElementById('profileCardUI'); const btnNo = document.getElementById('btnNoUI'); const btnYes = document.getElementById('btnYesUI'); confSub.classList.add('text-highlight'); await playAudio('conf_sub'); confSub.classList.remove('text-highlight'); if(!isAudioPlaying) return; profileCard.classList.add('audio-highlight'); await playAudio('conf_title'); profileCard.classList.remove('audio-highlight'); if(!isAudioPlaying) return; btnYes.classList.add('audio-highlight'); await playAudio('btn_yes'); btnYes.classList.remove('audio-highlight'); if(!isAudioPlaying) return; btnNo.classList.add('audio-highlight'); await playAudio('btn_no'); btnNo.classList.remove('audio-highlight'); if (isAudioPlaying) { isAudioPlaying = false; repeatTimer = setTimeout(triggerCurrentScreenAudio, 5000); } }
         async function _playSetupAudio() { const setupSub = document.getElementById('t_setup_sub'); const gState = document.getElementById('groupStateUI'); const gType = document.getElementById('groupTypeUI'); const gProvider = document.getElementById('groupProviderUI'); const gConsumer = document.getElementById('groupConsumerUI'); const btnFinish = document.getElementById('btnFinishUI'); setupSub.classList.add('text-highlight'); await playAudio('setup_sub'); setupSub.classList.remove('text-highlight'); if(!isAudioPlaying) return; gState.classList.add('audio-highlight'); await playAudio('lbl_state'); gState.classList.remove('audio-highlight'); if(!isAudioPlaying) return; gType.classList.add('audio-highlight'); await playAudio('lbl_type'); gType.classList.remove('audio-highlight'); if(!isAudioPlaying) return; gProvider.classList.add('audio-highlight'); await playAudio('lbl_provider'); gProvider.classList.remove('audio-highlight'); if(!isAudioPlaying) return; gConsumer.classList.add('audio-highlight'); await playAudio('lbl_consumer'); gConsumer.classList.remove('audio-highlight'); if(!isAudioPlaying) return; btnFinish.classList.add('audio-highlight'); await playAudio('btn_finish'); btnFinish.classList.remove('audio-highlight'); if (isAudioPlaying) { isAudioPlaying = false; repeatTimer = setTimeout(triggerCurrentScreenAudio, 5000); } }
-        async function _playDashboardAudio() { const b = document.getElementById('billsContainer'); const s = document.getElementById('cardCompUI'); b.classList.add('audio-highlight'); await playAudio('your_bills'); b.classList.remove('audio-highlight'); if(!isAudioPlaying) return; s.classList.add('audio-highlight'); await playAudio('services'); s.classList.remove('audio-highlight'); if (isAudioPlaying) { isAudioPlaying = false; repeatTimer = setTimeout(triggerCurrentScreenAudio, 8000); } }
+        
+        // --- UPDATED DASHBOARD AUDIO LOOP MAPPING ALL SERVICES ---
+        async function _playDashboardAudio() { 
+            const b = document.getElementById('billsContainer'); 
+            b.classList.add('audio-highlight'); 
+            await playAudio('your_bills'); 
+            b.classList.remove('audio-highlight'); 
+            if(!isAudioPlaying) return; 
+            
+            const sGrid = document.querySelector('.services-grid');
+            if (sGrid) sGrid.classList.add('audio-highlight');
+            await playAudio('services');
+            if (sGrid) sGrid.classList.remove('audio-highlight');
+            if(!isAudioPlaying) return;
+            
+            const cards = [
+                { id: 'cardCompUI', a: 'srv_comp' },
+                { id: 'cardHistUI', a: 'srv_hist' },
+                { id: 'cardAiUI', a: 'srv_ai' },
+                { id: 'cardGovUI', a: 'srv_gov' },
+                { id: 'cardDocUI', a: 'srv_doc' },
+                { id: 'cardSupportUI', a: 'srv_support' }
+            ];
+
+            for(let c of cards) {
+                const el = document.getElementById(c.id);
+                if (el) {
+                    el.classList.add('audio-highlight');
+                    await playAudio(c.a);
+                    el.classList.remove('audio-highlight');
+                    if(!isAudioPlaying) return;
+                }
+            }
+            
+            if (isAudioPlaying) { isAudioPlaying = false; repeatTimer = setTimeout(triggerCurrentScreenAudio, 8000); } 
+        }
 
         async function fetchLocationAndInit() { if ("geolocation" in navigator) { navigator.geolocation.getCurrentPosition(async (position) => { try { const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${position.coords.latitude}&longitude=${position.coords.longitude}&localityLanguage=en`); const data = await res.json(); geoFetchedState = data.principalSubdivision; if (stateToLangCode[geoFetchedState]) detectedLocalCode = stateToLangCode[geoFetchedState]; if (data.city && data.principalSubdivision) { document.getElementById('dashLocationUI').innerText = `${data.city}, ${data.principalSubdivision}`; } } catch (e) { console.warn("Location fetch failed", e); } finally { finalizeInit(); } }, () => finalizeInit()); } else { finalizeInit(); } }
         function finalizeInit() { if (detectedLocalCode !== 'en' && detectedLocalCode !== 'hi') priorityCodes = ['en', 'hi', detectedLocalCode]; else priorityCodes = ['en', 'hi']; if (priorityCodes.length === 3) { const localLangObj = allLanguages.find(l => l.code === priorityCodes[2]); document.getElementById('dynamicLangText').innerHTML = `शुरू करने के लिए टैप करें &nbsp;|&nbsp; ${localLangObj.tapText}`; document.getElementById('dynamicSubHeader').innerHTML = `अपनी भाषा चुनें | ${localLangObj.native} निवडा`; } renderLanguageGrids(); let providerState = geoFetchedState; if(!allStates.includes(providerState)) providerState = "Other"; populateStateDropdown(providerState); updateAadhaarDisplay(); updateOtpDisplay(); nav('landingScreen'); }
