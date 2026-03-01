@@ -78,13 +78,12 @@ SQUARE_LOCATION_ID=your_square_location_id</code></pre>
         </ul>
 
 <h2>👥 Team</h2>
-        <p>Developed by <strong>Team HACKONAUTS</strong> / <strong>Team Emogi</strong> (@AniEmogi):</p>
+        <p>Developed by <strong>Team HACKONAUTS</strong>:</p>
         <ul>
             <li><strong>Parth Wade:</strong> Team Leader &amp; Project Manager</li>
             <li><strong>Divyank Singh:</strong> System Designer</li>
             <li><strong>Ritesh Verma:</strong> Backend Developer</li>
             <li><strong>Darshan Ambekar:</strong> UI/UX Designer</li>
-            <li><strong>Ani:</strong> Core Kiosk Development &amp; API Integrations</li>
         </ul>
     </div>
 </body>
